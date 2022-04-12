@@ -1,6 +1,7 @@
 module Data.Foldable
   ( class Foldable, foldr, foldl, foldMap
   , foldrDefault, foldlDefault, foldMapDefaultL, foldMapDefaultR
+  , foldrDefaultOld, foldlDefaultOld
   , fold
   , foldM
   , traverse_
@@ -144,6 +145,12 @@ foldlDefault
   -> f a
   -> b
 foldlDefault c u xs = foldl c u $ foldMap Node xs
+
+foldrDefaultOld :: ∀ f a b. Foldable f => (a -> b -> b) -> b -> f a -> b
+foldrDefaultOld c u xs = unwrap (foldMap (Endo <<< c) xs) u
+
+foldlDefaultOld :: ∀ f a b. Foldable f => (b -> a -> b) -> b -> f a -> b
+foldlDefaultOld c u xs = unwrap (unwrap (foldMap (Dual <<< Endo <<< flip c) xs)) u
 
 -- | A default implementation of `foldMap` using `foldr`.
 -- |

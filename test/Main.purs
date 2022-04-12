@@ -5,7 +5,7 @@ import Prelude
 import Data.Bifoldable (class Bifoldable, bifoldl, bifoldr, bifoldMap, bifoldrDefault, bifoldlDefault, bifoldMapDefaultR, bifoldMapDefaultL)
 import Data.Bifunctor (class Bifunctor, bimap)
 import Data.Bitraversable (class Bitraversable, bisequenceDefault, bitraverse, bisequence, bitraverseDefault)
-import Data.Foldable (class Foldable, find, findMap, fold, indexl, indexr, foldMap, foldMapDefaultL, foldMapDefaultR, foldl, foldlDefault, foldr, foldrDefault, length, maximum, maximumBy, minimum, minimumBy, null, surroundMap)
+import Data.Foldable (class Foldable, find, findMap, fold, foldMap, foldMapDefaultL, foldMapDefaultR, foldl, foldlDefault, foldlDefaultOld, foldr, foldrDefault, foldrDefaultOld, indexl, indexr, length, maximum, maximumBy, minimum, minimumBy, null, surroundMap)
 import Data.FoldableWithIndex (class FoldableWithIndex, findWithIndex, findMapWithIndex, foldMapWithIndex, foldMapWithIndexDefaultL, foldMapWithIndexDefaultR, foldlWithIndex, foldlWithIndexDefault, foldrWithIndex, foldrWithIndexDefault, surroundMapWithIndex)
 import Data.Function (on)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
@@ -20,6 +20,7 @@ import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 import Effect (Effect, foreachE)
 import Effect.Console (log)
 import Math (abs)
+import Performance.Minibench (benchWith)
 import Test.Assert (assert, assert')
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -52,6 +53,33 @@ deferEff = unsafeCoerce
 
 main :: Effect Unit
 main = do
+  let 
+    a = arrayFrom1UpTo 1_000
+    b = arrayFrom1UpTo 10_000
+    c = arrayFrom1UpTo 100_000
+    d = arrayFrom1UpTo 1_000_000
+  log "\nbenching new code:"
+  log "\nbenching 1,000"
+  benchWith 1000 $ \_ -> foldlDefault (+) 0 a
+  log "\nbenching 10,000"
+  benchWith 500 $ \_ -> foldlDefault (+) 0 b
+  log "\nbenching 100,000"
+  benchWith 100 $ \_ -> foldlDefault (+) 0 c
+  log "\nbenching 1,000,000"
+  benchWith 50 $ \_ -> foldlDefault (+) 0 d
+
+  log "\nbenching old code:"
+  log "\nbenching 1,000"
+  benchWith 1000 $ \_ -> foldlDefaultOld (+) 0 a
+  log "\nbenching 10,000"
+  benchWith 500 $ \_ -> foldlDefaultOld (+) 0 b
+  log "\nbenching 100,000"
+  benchWith 100 $ \_ -> foldlDefaultOld (+) 0 c
+  log "\nbenching 1,000,000"
+  benchWith 50 $ \_ -> foldlDefaultOld (+) 0 d
+
+main_other :: Effect Unit
+main_other = do
   log "Test foldableArray instance"
   testFoldableArrayWith 20
 
