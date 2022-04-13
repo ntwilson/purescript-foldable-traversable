@@ -5,13 +5,15 @@ import Prelude
 import Data.Bifoldable (class Bifoldable, bifoldl, bifoldr, bifoldMap, bifoldrDefault, bifoldlDefault, bifoldMapDefaultR, bifoldMapDefaultL)
 import Data.Bifunctor (class Bifunctor, bimap)
 import Data.Bitraversable (class Bitraversable, bisequenceDefault, bitraverse, bisequence, bitraverseDefault)
-import Data.Foldable (class Foldable, find, findMap, fold, foldMap, foldMapDefaultL, foldMapDefaultR, foldl, foldlDefault, foldlDefaultOld, foldr, foldrDefault, foldrDefaultOld, indexl, indexr, length, maximum, maximumBy, minimum, minimumBy, null, surroundMap)
+import Data.Foldable (class Foldable, find, findMap, fold, foldMap, foldMapDefaultL, foldMapDefaultR, foldl, foldlDefault, foldr, foldrDefault, indexl, indexr, length, maximum, maximumBy, minimum, minimumBy, null, surroundMap)
 import Data.FoldableWithIndex (class FoldableWithIndex, findWithIndex, findMapWithIndex, foldMapWithIndex, foldMapWithIndexDefaultL, foldMapWithIndexDefaultR, foldlWithIndex, foldlWithIndexDefault, foldrWithIndex, foldrWithIndexDefault, surroundMapWithIndex)
 import Data.Function (on)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
 import Data.Int (toNumber, pow)
 import Data.Maybe (Maybe(..))
 import Data.Monoid.Additive (Additive(..))
+import Data.Monoid.Dual (Dual(..))
+import Data.Monoid.Endo (Endo(..))
 import Data.Newtype (unwrap)
 import Data.Semigroup.Foldable (class Foldable1, foldr1, foldl1, foldr1Default, foldl1Default)
 import Data.Semigroup.Foldable as Foldable1
@@ -53,33 +55,6 @@ deferEff = unsafeCoerce
 
 main :: Effect Unit
 main = do
-  let 
-    a = arrayFrom1UpTo 1_000
-    b = arrayFrom1UpTo 10_000
-    c = arrayFrom1UpTo 100_000
-    d = arrayFrom1UpTo 1_000_000
-  log "\nbenching new code:"
-  log "\nbenching 1,000"
-  benchWith 1000 $ \_ -> foldlDefault (+) 0 a
-  log "\nbenching 10,000"
-  benchWith 500 $ \_ -> foldlDefault (+) 0 b
-  log "\nbenching 100,000"
-  benchWith 100 $ \_ -> foldlDefault (+) 0 c
-  log "\nbenching 1,000,000"
-  benchWith 50 $ \_ -> foldlDefault (+) 0 d
-
-  log "\nbenching old code:"
-  log "\nbenching 1,000"
-  benchWith 1000 $ \_ -> foldlDefaultOld (+) 0 a
-  log "\nbenching 10,000"
-  benchWith 500 $ \_ -> foldlDefaultOld (+) 0 b
-  log "\nbenching 100,000"
-  benchWith 100 $ \_ -> foldlDefaultOld (+) 0 c
-  log "\nbenching 1,000,000"
-  benchWith 50 $ \_ -> foldlDefaultOld (+) 0 d
-
-main_other :: Effect Unit
-main_other = do
   log "Test foldableArray instance"
   testFoldableArrayWith 20
 
@@ -253,6 +228,8 @@ main_other = do
       == Just (-1.0)
 
   log "All done!"
+
+  benchmarkDefaultFolds
 
 
 testFoldableFWith
@@ -602,21 +579,44 @@ instance bitraversableBSD :: Bitraversable BisequenceDefault where
   bitraverse f g (BSD m) = map BSD (bitraverse f g m)
   bisequence m           = bisequenceDefault m
 
+foldrDefaultOld
+  :: forall f a b
+   . Foldable f
+  => (a -> b -> b)
+  -> b
+  -> f a
+  -> b
+foldrDefaultOld c u xs = unwrap (foldMap (Endo <<< c) xs) u
+
+foldlDefaultOld
+  :: forall f a b
+   . Foldable f
+  => (b -> a -> b)
+  -> b
+  -> f a
+  -> b
+foldlDefaultOld c u xs = unwrap (unwrap (foldMap (Dual <<< Endo <<< flip c) xs)) u
 
 benchmarkDefaultFolds :: Effect Unit
 benchmarkDefaultFolds = do
   let 
     sm = arrayFrom1UpTo 1_000
     m = arrayFrom1UpTo 10_000
-    lg = arrayFrom1UpTo 100_000
-    xl = arrayFrom1UpTo 1_000_000
+    -- lg = arrayFrom1UpTo 100_000
+    -- xl = arrayFrom1UpTo 1_000_000
+
+  log "\nold - benching 1,000"
+  benchWith 1000 $ \_ -> foldrDefaultOld (+) 0 sm
+  log "\nold - benching 10,000"
+  benchWith 1000 $ \_ -> foldrDefaultOld (+) 0 m
+
 
   log "\nbenching 1,000"
   benchWith 1000 $ \_ -> foldrDefault (+) 0 sm
   log "\nbenching 10,000"
   benchWith 1000 $ \_ -> foldrDefault (+) 0 m
-  log "\nbenching 100,000"
-  benchWith 100 $ \_ -> foldrDefault (+) 0 lg
-  log "\nbenching 1,000,000"
-  benchWith 50 $ \_ -> foldrDefault (+) 0 xl
+  -- log "\nbenching 100,000"
+  -- benchWith 100 $ \_ -> foldrDefault (+) 0 lg
+  -- log "\nbenching 1,000,000"
+  -- benchWith 50 $ \_ -> foldrDefault (+) 0 xl
 
